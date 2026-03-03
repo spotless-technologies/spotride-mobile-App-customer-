@@ -7,6 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ToastProvider } from '@/components/common/ToastContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const ONBOARDING_KEY = 'spotride_has_onboarded';
@@ -47,19 +48,22 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
-        </Stack>
-        <StatusBar style="light" backgroundColor="transparent" translucent />
+      <ToastProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
+          </Stack>
+          <StatusBar style="light" backgroundColor="transparent" translucent />
 
-        {/* Loading overlay to prevent flashing the home page */}
-        {isCheckingOnboarding && (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#111218' }]} />
-        )}
-      </ThemeProvider>
+          {/* Loading overlay to prevent flashing the home page */}
+          {isCheckingOnboarding && (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#111218' }]} />
+          )}
+        </ThemeProvider>
+      </ToastProvider>
     </SafeAreaProvider>
   );
 }

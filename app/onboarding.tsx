@@ -14,7 +14,7 @@ export default function OnboardingRoute() {
 
     const handleOnboardingDone = () => {
         // Replace so user cannot back-navigate to onboarding
-        router.replace('/(tabs)');
+        router.replace('/login');
     };
 
     return (
