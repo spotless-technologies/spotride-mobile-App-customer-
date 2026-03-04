@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React from 'react';
 import {
     Platform,
@@ -50,7 +51,8 @@ export default function OnboardingControls({
                 {isLastSlide ? (
                     <TouchableOpacity
                         style={styles.continueButton}
-                        onPress={onNext}
+                        // onPress={onNext} 
+                        onPress={() => router.push('/(auth)/signup')}
                         activeOpacity={0.85}
                     >
                         <Text style={styles.continueText}>Continue  ›</Text>

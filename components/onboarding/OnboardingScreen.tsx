@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useRef, useState } from 'react';
 import {
     Dimensions,
@@ -13,8 +12,6 @@ import OnboardingControls from './OnboardingControls';
 import OnboardingSlide, { SlideData } from './OnboardingSlide';
 
 const { width } = Dimensions.get('window');
-
-const ONBOARDING_KEY = 'spotride_has_onboarded';
 
 const SLIDES: SlideData[] = [
     {
@@ -55,12 +52,7 @@ export default function OnboardingScreen({ onDone }: OnboardingScreenProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef<FlatList<SlideData>>(null);
 
-    const markOnboarded = useCallback(async () => {
-        try {
-            await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-        } catch (_) {
-            // fail silently — don't block the user
-        }
+    const markOnboarded = useCallback(() => {
         onDone();
     }, [onDone]);
 

@@ -27,15 +27,12 @@ export default function RootLayout() {
         const value = await AsyncStorage.getItem(ONBOARDING_KEY);
         console.log('[RootLayout] Onboarding status:', value);
 
-        // Short delay to ensure the Router and Stack are fully mounted
-        setTimeout(() => {
-          if (value === 'true') {
-            router.replace('/(tabs)');
-          } else {
-            router.replace('/onboarding');
-          }
-          setIsCheckingOnboarding(false);
-        }, 300);
+        if (value === 'true') {
+          router.replace('/(tabs)');
+        } else {
+          router.replace('/onboarding');
+        }
+        setIsCheckingOnboarding(false);
       } catch (e) {
         console.error('[RootLayout] AsyncStorage error:', e);
         router.replace('/onboarding');

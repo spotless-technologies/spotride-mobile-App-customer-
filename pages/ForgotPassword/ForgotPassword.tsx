@@ -3,8 +3,8 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { authService } from '@/services/authService';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
 import {
     Dimensions,
     Image,
@@ -20,42 +20,36 @@ import {
 
 const { width } = Dimensions.get('window');
 
-const Verify = () => {
-    const { identifier } = useLocalSearchParams<{ identifier: string }>();
+const ForgotPassword = () => {
     const colorScheme = useColorScheme() ?? 'light';
     const themeColors = Colors[colorScheme];
     const { showToast } = useToast();
 
-    const [code, setCode] = useState('');
-    const [timer, setTimer] = useState(300);
+    const [identifier, setIdentifier] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setTimer((prev) => (prev > 0 ? prev - 1 : 0));
-        }, 1000);
-        return () => clearInterval(interval);
-    }, []);
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    const validate = () => {
+        if (!identifier) {
+            setErrors({ identifier: 'Email Address or Phone Number is required' });
+            return false;
+        }
+        setErrors({});
+        return true;
     };
 
-    const handleVerify = async () => {
-        if (!code || code.length < 6) {
-            setErrors({ code: 'Please enter a valid 6-digit code' });
-            return;
-        }
+    const handleRequestReset = async () => {
+        if (!validate()) return;
         setIsLoading(true);
         try {
-            const response = await authService.verifyToken(code);
+            const response = await authService.forgotPassword(identifier);
             if (response.success) {
                 showToast(response.message, 'success');
                 setTimeout(() => {
-                    router.replace('/(tabs)');
+                    router.push({
+                        pathname: '/reset-password',
+                        params: { identifier }
+                    });
                 }, 1500);
             } else {
                 showToast(response.message, 'error');
@@ -64,16 +58,6 @@ const Verify = () => {
             showToast('An unexpected error occurred.', 'error');
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const handleResend = async () => {
-        try {
-            const response = await authService.resendCode(identifier || '');
-            showToast(response.message, response.success ? 'success' : 'error');
-            if (response.success) setTimer(300);
-        } catch (error) {
-            showToast('Could not resend code.', 'error');
         }
     };
 
@@ -95,11 +79,7 @@ const Verify = () => {
                             style={styles.headerImage}
                         />
                     </View>
-
-                    {/* Dark tint over photo */}
                     <View style={styles.darkOverlay} />
-
-                    {/* SpotRide logo */}
                     <View style={styles.logoContainer}>
                         <Image
                             source={require('@/assets/images/onboarding/Untitled-1 2.png')}
@@ -107,16 +87,11 @@ const Verify = () => {
                             resizeMode="contain"
                         />
                     </View>
-
-                    {/* Title block */}
                     <View style={styles.headerContent}>
-                        <Text style={styles.title}>Verify Account</Text>
-                        <Text style={styles.subtitle}>Secure your account with the code sent to you.</Text>
+                        <Text style={styles.title}>Forgot Password</Text>
+                        <Text style={styles.subtitle}>Enter your details to receive a reset code.</Text>
                     </View>
-
-                    {/* Orange arch ring */}
                     <View style={styles.archOrange} />
-                    {/* White arch fill */}
                     <View style={styles.archWhite} />
                 </View>
 
@@ -124,72 +99,50 @@ const Verify = () => {
                 <View style={styles.formContainer}>
                     <View style={styles.iconWrapper}>
                         <View style={[styles.mainIconContainer, { backgroundColor: '#FFD7C2' }]}>
-                            <Ionicons name="shield-checkmark" size={32} color={themeColors.primary} />
+                            <Ionicons name="key-outline" size={32} color={themeColors.primary} />
                         </View>
-                    </View>
-
-                    <View style={styles.infoContainer}>
-                        <Text style={styles.infoText}>
-                            We've sent a 6-digit verification code to
-                        </Text>
-                        <Text style={styles.identifierText}>
-                            {identifier || '08012345678'}
-                        </Text>
                     </View>
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>
-                            Verification Code <Text style={styles.required}>*</Text>
+                            Email or Phone <Text style={styles.required}>*</Text>
                         </Text>
-                        <View style={[styles.inputWrapper, errors.code ? styles.inputError : null]}>
+                        <View style={[styles.inputWrapper, errors.identifier ? styles.inputError : null]}>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Enter 6-digit code"
+                                placeholder="merchant@example.com / 080..."
                                 placeholderTextColor="#BBB"
-                                keyboardType="number-pad"
-                                maxLength={6}
-                                value={code}
+                                value={identifier}
                                 onChangeText={(val) => {
-                                    setCode(val);
-                                    if (errors.code) setErrors({});
+                                    setIdentifier(val);
+                                    if (errors.identifier) setErrors({});
                                 }}
+                                autoCapitalize="none"
                             />
                         </View>
-                        {errors.code && <Text style={styles.errorText}>{errors.code}</Text>}
-                        <Text style={styles.timerText}>
-                            Code expires in <Text style={{ color: themeColors.primary, fontWeight: 'bold' }}>{formatTime(timer)}</Text>
+                        {errors.identifier && <Text style={styles.errorText}>{errors.identifier}</Text>}
+                        <Text style={styles.hintText}>
+                            We'll send a 6-digit code to this identifier to verify your ownership.
                         </Text>
                     </View>
 
                     <TouchableOpacity
-                        style={[styles.verifyButton, { backgroundColor: themeColors.primary }]}
-                        onPress={handleVerify}
+                        style={[styles.resetButton, { backgroundColor: themeColors.primary }]}
+                        onPress={handleRequestReset}
                         disabled={isLoading}
                         activeOpacity={0.85}
                     >
-                        <Text style={styles.verifyButtonText}>
-                            {isLoading ? 'Verifying...' : 'Verify Code'}
+                        <Text style={styles.resetButtonText}>
+                            {isLoading ? 'Sending Code...' : 'Send Reset Code'}
                         </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={styles.changeButton}
+                        style={styles.backButton}
                         onPress={() => router.back()}
                     >
-                        <Text style={styles.changeButtonText}>Change Details</Text>
+                        <Text style={styles.backButtonText}>Back to Login</Text>
                     </TouchableOpacity>
-
-                    <View style={styles.resendContainer}>
-                        <Text style={styles.resendText}>
-                            Didn't receive the code?{' '}
-                            <Text
-                                style={[styles.link, { color: timer === 0 ? themeColors.primary : '#AAA' }]}
-                                onPress={timer === 0 ? handleResend : undefined}
-                            >
-                                Resend Code
-                            </Text>
-                        </Text>
-                    </View>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
@@ -293,23 +246,8 @@ const styles = StyleSheet.create({
         borderWidth: 4,
         borderColor: '#FFF',
     },
-    infoContainer: {
-        alignItems: 'center',
-        marginTop: 20,
-        marginBottom: 30,
-    },
-    infoText: {
-        fontSize: 16,
-        color: '#555',
-        textAlign: 'center',
-        marginBottom: 5,
-    },
-    identifierText: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: '#111218',
-    },
     inputGroup: {
+        marginTop: 30,
         marginBottom: 24,
     },
     label: {
@@ -334,24 +272,21 @@ const styles = StyleSheet.create({
         borderColor: '#E8440A',
     },
     input: {
-        fontSize: 24,
+        fontSize: 16,
         color: '#111218',
-        textAlign: 'center',
-        letterSpacing: 8,
-        fontWeight: '800',
     },
     errorText: {
         color: '#E8440A',
         fontSize: 12,
         marginTop: 4,
     },
-    timerText: {
-        textAlign: 'center',
-        marginTop: 15,
+    hintText: {
         color: '#777',
-        fontSize: 14,
+        fontSize: 13,
+        marginTop: 12,
+        lineHeight: 18,
     },
-    verifyButton: {
+    resetButton: {
         height: 52,
         borderRadius: 10,
         alignItems: 'center',
@@ -363,37 +298,26 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.12,
         shadowRadius: 4,
     },
-    verifyButtonText: {
+    resetButtonText: {
         color: '#FFF',
         fontSize: 17,
         fontWeight: '800',
         letterSpacing: 0.3,
     },
-    changeButton: {
+    backButton: {
         height: 52,
         borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: '#DDD',
-        marginBottom: 24,
+        marginBottom: 40,
     },
-    changeButtonText: {
+    backButtonText: {
         fontSize: 15,
         fontWeight: '700',
         color: '#444',
     },
-    resendContainer: {
-        alignItems: 'center',
-        marginBottom: 40,
-    },
-    resendText: {
-        fontSize: 14,
-        color: '#555',
-    },
-    link: {
-        fontWeight: '700',
-    },
 });
 
-export default Verify;
+export default ForgotPassword;

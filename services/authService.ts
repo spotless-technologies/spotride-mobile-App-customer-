@@ -83,5 +83,40 @@ export const authService = {
                 });
             }, 1000);
         });
+    },
+
+    /**
+     * Mock forgot password request
+     */
+    forgotPassword: async (identifier: string): Promise<AuthResponse> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({
+                    success: true,
+                    message: 'Password reset code sent successfully!'
+                });
+            }, 1000);
+        });
+    },
+
+    /**
+     * Mock reset password
+     */
+    resetPassword: async (code: string, password: string): Promise<AuthResponse> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                if (code === '123456') {
+                    resolve({
+                        success: true,
+                        message: 'Password reset successfully!'
+                    });
+                } else {
+                    resolve({
+                        success: false,
+                        message: 'Invalid reset code.'
+                    });
+                }
+            }, 1000);
+        });
     }
 };
