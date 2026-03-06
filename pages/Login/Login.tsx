@@ -1,15 +1,17 @@
 import { useToast } from '@/components/common/ToastContext';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { authService } from '@/services/authService';
+import { PUBLIC_API_BASE_URL } from '@/utils/Api';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import axios from 'axios';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 const Login = () => {
+    const { identifier } = useLocalSearchParams<{ identifier: string }>();
     const colorScheme = useColorScheme() ?? 'light';
     const themeColors = Colors[colorScheme];
     const { showToast } = useToast();
@@ -18,10 +20,24 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+    useEffect(() => {
+        if (identifier) {
+            console.log('[Login] Received identifier:', identifier);
+            // Check if identifier looks like an email or phone
+            if (identifier.includes('@')) {
+                setLoginType('email');
+                setEmail(identifier);
+            } else {
+                setLoginType('phone');
+                setPhone(identifier);
+            }
+        }
+    }, [identifier]);
 
     // useEffect(() => {
     //     const checkAuthStatus = async () => {
@@ -67,19 +83,28 @@ const Login = () => {
 
         setIsLoading(true);
         try {
-            const identifier = loginType === 'email' ? email : phone;
-            const response = await authService.login(identifier, password);
+            const identifierValue = loginType === 'email' ? email : phone;
+            const payload = {
+                email: identifierValue.trim(),
+                password,
+                method: 'both',
+            };
 
-            if (response.success) {
-                showToast(response.message, 'success');
+            console.log('[Login] Sending payload:', payload);
+            const response = await axios.post(`${PUBLIC_API_BASE_URL}/auth/login/password`, payload);
+            console.log("response_data", response.data)
+            if (response.status === 200 || response.status === 201) {
+                showToast('Login successful!', 'success');
                 setTimeout(() => {
                     router.replace('/verify');
                 }, 1500);
             } else {
-                showToast(response.message, 'error');
+                showToast(response.data?.message || 'Login failed', 'error');
             }
-        } catch (error) {
-            showToast('An unexpected error occurred.', 'error');
+        } catch (error: any) {
+            console.error('[Login] Error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'An unexpected error occurred.';
+            showToast(errorMessage, 'error');
         } finally {
             setIsLoading(false);
         }
@@ -156,15 +181,25 @@ const Login = () => {
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>
-                        <View style={[styles.inputWrapper, errors.password ? styles.inputError : null]}>
+                        <View style={[styles.inputWrapper, styles.passwordWrapper, errors.password ? styles.inputError : null]}>
                             <TextInput
                                 style={styles.input}
                                 placeholder="Enter your password"
                                 placeholderTextColor="#BBB"
-                                secureTextEntry
+                                secureTextEntry={!showPassword}
                                 value={password}
                                 onChangeText={setPassword}
                             />
+                            <TouchableOpacity
+                                style={styles.eyeIcon}
+                                onPress={() => setShowPassword(!showPassword)}
+                            >
+                                <Ionicons
+                                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                                    size={22}
+                                    color="#999"
+                                />
+                            </TouchableOpacity>
                         </View>
                         {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
                     </View>
@@ -369,6 +404,7 @@ const styles = StyleSheet.create({
         borderColor: '#E8440A',
     },
     input: {
+        flex: 1,
         fontSize: 15,
         color: '#111218',
     },
@@ -462,6 +498,15 @@ const styles = StyleSheet.create({
     },
     link: {
         fontWeight: '700',
+    },
+    passwordWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingRight: 10,
+    },
+    eyeIcon: {
+        padding: 4,
+
     },
 });
 

@@ -1,8 +1,9 @@
 import { useToast } from '@/components/common/ToastContext';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { authService } from '@/services/authService';
+import { PUBLIC_API_BASE_URL } from '@/utils/Api';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -42,20 +43,27 @@ const ForgotPassword = () => {
         if (!validate()) return;
         setIsLoading(true);
         try {
-            const response = await authService.forgotPassword(identifier);
-            if (response.success) {
-                showToast(response.message, 'success');
+            const payload = {
+                email: identifier.trim(),
+            };
+            console.log('[ForgotPassword] Sending payload:', payload);
+            const response = await axios.post(`${PUBLIC_API_BASE_URL}/auth/forgot-password`, payload);
+
+            if (response.status === 200 || response.status === 201) {
+                showToast(response.data?.message || 'Code sent successfully', 'success');
                 setTimeout(() => {
                     router.push({
                         pathname: '/reset-password',
-                        params: { identifier }
+                        params: { identifier: identifier.trim() }
                     });
                 }, 1500);
             } else {
-                showToast(response.message, 'error');
+                showToast(response.data?.message || 'Failed to send code', 'error');
             }
-        } catch (error) {
-            showToast('An unexpected error occurred.', 'error');
+        } catch (error: any) {
+            console.error('[ForgotPassword] Error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'An unexpected error occurred.';
+            showToast(errorMessage, 'error');
         } finally {
             setIsLoading(false);
         }

@@ -1,8 +1,9 @@
 import { useToast } from '@/components/common/ToastContext';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { authService } from '@/services/authService';
+import { PUBLIC_API_BASE_URL } from '@/utils/Api';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -29,6 +30,8 @@ const ResetPassword = () => {
     const [code, setCode] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -47,17 +50,27 @@ const ResetPassword = () => {
         if (!validate()) return;
         setIsLoading(true);
         try {
-            const response = await authService.resetPassword(code, password);
-            if (response.success) {
-                showToast(response.message, 'success');
+            const payload = {
+                email: identifier || '',
+                otp: code,
+                newPassword: password
+            };
+
+            console.log('[ResetPassword] Sending payload:', payload);
+            const response = await axios.post(`${PUBLIC_API_BASE_URL}/auth/reset-password`, payload);
+
+            if (response.status === 200 || response.status === 201) {
+                showToast(response.data?.message || 'Password reset successfully', 'success');
                 setTimeout(() => {
                     router.replace('/login');
                 }, 1500);
             } else {
-                showToast(response.message, 'error');
+                showToast(response.data?.message || 'Failed to reset password', 'error');
             }
-        } catch (error) {
-            showToast('An unexpected error occurred.', 'error');
+        } catch (error: any) {
+            console.error('[ResetPassword] Error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'An unexpected error occurred.';
+            showToast(errorMessage, 'error');
         } finally {
             setIsLoading(false);
         }
@@ -141,18 +154,28 @@ const ResetPassword = () => {
                         <Text style={styles.label}>
                             New Password <Text style={styles.required}>*</Text>
                         </Text>
-                        <View style={[styles.inputWrapper, errors.password ? styles.inputError : null]}>
+                        <View style={[styles.inputWrapper, styles.passwordWrapper, errors.password ? styles.inputError : null]}>
                             <TextInput
                                 style={styles.input}
                                 placeholder="Enter new password"
                                 placeholderTextColor="#BBB"
-                                secureTextEntry
+                                secureTextEntry={!showPassword}
                                 value={password}
                                 onChangeText={(val) => {
                                     setPassword(val);
                                     if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
                                 }}
                             />
+                            <TouchableOpacity
+                                style={styles.eyeIcon}
+                                onPress={() => setShowPassword(!showPassword)}
+                            >
+                                <Ionicons
+                                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                                    size={22}
+                                    color="#999"
+                                />
+                            </TouchableOpacity>
                         </View>
                         {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
                     </View>
@@ -162,18 +185,28 @@ const ResetPassword = () => {
                         <Text style={styles.label}>
                             Confirm Password <Text style={styles.required}>*</Text>
                         </Text>
-                        <View style={[styles.inputWrapper, errors.confirmPassword ? styles.inputError : null]}>
+                        <View style={[styles.inputWrapper, styles.passwordWrapper, errors.confirmPassword ? styles.inputError : null]}>
                             <TextInput
                                 style={styles.input}
                                 placeholder="Confirm new password"
                                 placeholderTextColor="#BBB"
-                                secureTextEntry
+                                secureTextEntry={!showConfirmPassword}
                                 value={confirmPassword}
                                 onChangeText={(val) => {
                                     setConfirmPassword(val);
                                     if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: '' }));
                                 }}
                             />
+                            <TouchableOpacity
+                                style={styles.eyeIcon}
+                                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                            >
+                                <Ionicons
+                                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                                    size={22}
+                                    color="#999"
+                                />
+                            </TouchableOpacity>
                         </View>
                         {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
                     </View>
@@ -330,6 +363,7 @@ const styles = StyleSheet.create({
         borderColor: '#E8440A',
     },
     input: {
+        flex: 1,
         fontSize: 15,
         color: '#111218',
     },
@@ -356,6 +390,14 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: '800',
         letterSpacing: 0.3,
+    },
+    passwordWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingRight: 10,
+    },
+    eyeIcon: {
+        padding: 5,
     },
 });
 

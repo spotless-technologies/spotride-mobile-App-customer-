@@ -1,11 +1,13 @@
 import { useToast } from '@/components/common/ToastContext';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { authService } from '@/services/authService';
+import { PUBLIC_API_BASE_URL } from '@/utils/Api';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import axios from 'axios';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     Dimensions,
     Image,
     KeyboardAvoidingView,
@@ -21,64 +23,116 @@ import {
 const { width } = Dimensions.get('window');
 
 const Signup = () => {
-    const { mode } = useLocalSearchParams<{ mode: string }>();
     const colorScheme = useColorScheme() ?? 'light';
     const themeColors = Colors[colorScheme];
     const { showToast } = useToast();
 
     const [signupType, setSignupType] = useState<'email' | 'phone'>('email');
-    const [fullName, setFullName] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     const validate = () => {
+        console.log('[Signup] Starting validation...', { signupType, firstName, lastName, email, phone });
         const newErrors: { [key: string]: string } = {};
-        if (!fullName.trim()) newErrors.fullName = 'Full Name is required';
-        if (signupType === 'email') {
-            if (!email) newErrors.email = 'Email Address is required';
-            else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email Address is invalid';
-        } else {
-            if (!phone) newErrors.phone = 'Phone Number is required';
+
+        try {
+            const safeFirstName = String(firstName || '').trim();
+            const safeLastName = String(lastName || '').trim();
+
+            if (!safeFirstName) newErrors.firstName = 'First Name is required';
+            if (!safeLastName) newErrors.lastName = 'Last Name is required';
+
+            if (signupType === 'email') {
+                const safeEmail = String(email || '').trim();
+                if (!safeEmail) newErrors.email = 'Email Address is required';
+                else if (!/\S+@\S+\.\S+/.test(safeEmail)) newErrors.email = 'Email Address is invalid';
+            } else {
+                const safePhone = String(phone || '').trim();
+                if (!safePhone) newErrors.phone = 'Phone Number is required';
+            }
+
+            if (!password) newErrors.password = 'Password is required';
+            else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+
+            if (!confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
+            else if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+
+            setErrors(newErrors);
+            console.log('[Signup] Validation result:', newErrors);
+            return Object.keys(newErrors).length === 0;
+        } catch (error) {
+            console.error('[Signup] Validation crash:', error);
+            throw error;
         }
-        if (!password) newErrors.password = 'Password is required';
-        else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-        if (!confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
-        else if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
     };
 
     const handleSignup = async () => {
-        if (!validate()) return;
+        console.log('[Signup] handleSignup triggered');
+        if (!validate()) {
+            console.log('[Signup] Validation failed');
+            return;
+        }
         setIsLoading(true);
         try {
-            const data = {
-                fullName,
-                identifier: signupType === 'email' ? email : phone,
-                password,
-                mode: mode || 'passenger',
+            console.log('[Signup] Preparing payload');
+            const payload: any = {
+                password: String(password || ''),
+                first_name: String(firstName || '').trim(),
+                last_name: String(lastName || '').trim(),
+                role: 'CUSTOMER',
             };
-            const response = await authService.signUp(data);
-            if (response.success) {
-                showToast(response.message, 'success');
+
+            // Only include email if not empty
+            const safeEmail = String(email || '').trim();
+            if (safeEmail) {
+                payload.email = safeEmail;
+            }
+
+            // Only include phone if not empty
+            const safePhone = String(phone || '').trim();
+            if (safePhone) {
+                payload.phone = safePhone;
+            }
+
+            console.log("[Signup] Sending payload:", payload);
+            const response = await axios.post(`${PUBLIC_API_BASE_URL}/auth/register`, payload);
+            console.log("[Signup] Response received:", response.status);
+
+            if (response.status === 201 || response.status === 200) {
+                showToast('Account created successfully!', 'success');
+                const identifierValue = String(payload.email || payload.phone || '');
+                console.log("[Signup] Successful signup, navigating with identifier:", identifierValue);
+
                 setTimeout(() => {
-                    router.push({
-                        pathname: '/verify',
-                        params: { identifier: data.identifier },
-                    });
+                    try {
+                        router.push({
+                            pathname: '/login',
+                            params: { identifier: String(identifierValue) },
+                        });
+                    } catch (navError) {
+                        console.error('[Signup] Navigation Error:', navError);
+                        router.replace('/login');
+                    }
                 }, 1500);
             } else {
-                showToast(response.message, 'error');
+                showToast(response.data?.message || 'Registration failed', 'error');
             }
-        } catch (error) {
-            showToast('An unexpected error occurred.', 'error');
+        } catch (error: any) {
+            console.error('[Signup] Signup error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'An unexpected error occurred.';
+            showToast(errorMessage, 'error');
         } finally {
             setIsLoading(false);
+            console.log('[Signup] handleSignup finished');
         }
     };
 
@@ -158,22 +212,41 @@ const Signup = () => {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Full Name */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>
-                            Full Name <Text style={styles.required}>*</Text>
-                        </Text>
-                        <View style={[styles.inputWrapper, errors.fullName && styles.inputError]}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="John Doe"
-                                placeholderTextColor="#BBB"
-                                value={fullName}
-                                onChangeText={setFullName}
-                                autoCapitalize="words"
-                            />
+                    {/* First Name & Last Name */}
+                    <View style={styles.nameContainer}>
+                        <View style={[styles.inputGroup, { flex: 1 }]}>
+                            <Text style={styles.label}>
+                                First Name <Text style={styles.required}>*</Text>
+                            </Text>
+                            <View style={[styles.inputWrapper, errors.firstName && styles.inputError]}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="John"
+                                    placeholderTextColor="#BBB"
+                                    value={firstName}
+                                    onChangeText={setFirstName}
+                                    autoCapitalize="words"
+                                />
+                            </View>
+                            {errors.firstName ? <Text style={styles.errorText}>{errors.firstName}</Text> : null}
                         </View>
-                        {errors.fullName ? <Text style={styles.errorText}>{errors.fullName}</Text> : null}
+
+                        <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
+                            <Text style={styles.label}>
+                                Last Name <Text style={styles.required}>*</Text>
+                            </Text>
+                            <View style={[styles.inputWrapper, errors.lastName && styles.inputError]}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Doe"
+                                    placeholderTextColor="#BBB"
+                                    value={lastName}
+                                    onChangeText={setLastName}
+                                    autoCapitalize="words"
+                                />
+                            </View>
+                            {errors.lastName ? <Text style={styles.errorText}>{errors.lastName}</Text> : null}
+                        </View>
                     </View>
 
                     {/* Email or Phone */}
@@ -203,15 +276,25 @@ const Signup = () => {
                         <Text style={styles.label}>
                             Password <Text style={styles.required}>*</Text>
                         </Text>
-                        <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
+                        <View style={[styles.inputWrapper, styles.passwordWrapper, errors.password && styles.inputError]}>
                             <TextInput
                                 style={styles.input}
                                 placeholder="Create a strong password"
                                 placeholderTextColor="#BBB"
-                                secureTextEntry
+                                secureTextEntry={!showPassword}
                                 value={password}
                                 onChangeText={setPassword}
                             />
+                            <TouchableOpacity
+                                style={styles.eyeIcon}
+                                onPress={() => setShowPassword(!showPassword)}
+                            >
+                                <Ionicons
+                                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                                    size={22}
+                                    color="#999"
+                                />
+                            </TouchableOpacity>
                         </View>
                         {errors.password ? (
                             <Text style={styles.errorText}>{errors.password}</Text>
@@ -227,15 +310,25 @@ const Signup = () => {
                         <Text style={styles.label}>
                             Confirm Password <Text style={styles.required}>*</Text>
                         </Text>
-                        <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
+                        <View style={[styles.inputWrapper, styles.passwordWrapper, errors.confirmPassword && styles.inputError]}>
                             <TextInput
                                 style={styles.input}
                                 placeholder="Confirm your password"
                                 placeholderTextColor="#BBB"
-                                secureTextEntry
+                                secureTextEntry={!showConfirmPassword}
                                 value={confirmPassword}
                                 onChangeText={setConfirmPassword}
                             />
+                            <TouchableOpacity
+                                style={styles.eyeIcon}
+                                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                            >
+                                <Ionicons
+                                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                                    size={22}
+                                    color="#999"
+                                />
+                            </TouchableOpacity>
                         </View>
                         {errors.confirmPassword ? (
                             <Text style={styles.errorText}>{errors.confirmPassword}</Text>
@@ -264,14 +357,19 @@ const Signup = () => {
 
                     {/* Sign Up button */}
                     <TouchableOpacity
-                        style={[styles.signupButton, { backgroundColor: themeColors.primary }]}
+                        style={[styles.signupButton, { backgroundColor: themeColors.primary, opacity: isLoading ? 0.8 : 1 }]}
                         onPress={handleSignup}
                         disabled={isLoading}
                         activeOpacity={0.85}
                     >
-                        <Text style={styles.signupButtonText}>
-                            {isLoading ? 'Creating Account...' : 'Sign Up'}
-                        </Text>
+                        {isLoading ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator color="#FFF" size="small" />
+                                <Text style={[styles.signupButtonText, { marginLeft: 10 }]}>Creating...</Text>
+                            </View>
+                        ) : (
+                            <Text style={styles.signupButtonText}>Sign Up</Text>
+                        )}
                     </TouchableOpacity>
 
                     {/* Divider */}
@@ -398,6 +496,11 @@ const styles = StyleSheet.create({
         // paddingTop: 0,
         backgroundColor: '#FFFFFF',
     },
+    nameContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
 
     /* Tabs */
     tabContainer: {
@@ -459,8 +562,17 @@ const styles = StyleSheet.create({
         borderColor: '#E8440A',
     },
     input: {
+        flex: 1,
         fontSize: 15,
         color: '#111218',
+    },
+    passwordWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    eyeIcon: {
+        padding: 4,
     },
     errorText: {
         color: '#E8440A',
@@ -524,6 +636,11 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: '800',
         letterSpacing: 0.3,
+    },
+    loadingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 
     /* Divider */

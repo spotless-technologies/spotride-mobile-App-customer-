@@ -1,8 +1,10 @@
 import { useToast } from '@/components/common/ToastContext';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { authService } from '@/services/authService';
+import { PUBLIC_API_BASE_URL } from '@/utils/Api';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -22,6 +24,7 @@ const { width } = Dimensions.get('window');
 
 const Verify = () => {
     const { identifier } = useLocalSearchParams<{ identifier: string }>();
+    // console.log('[Verify] Identifier:', identifier);
     const colorScheme = useColorScheme() ?? 'light';
     const themeColors = Colors[colorScheme];
     const { showToast } = useToast();
@@ -51,17 +54,36 @@ const Verify = () => {
         }
         setIsLoading(true);
         try {
-            const response = await authService.verifyToken(code);
-            if (response.success) {
-                showToast(response.message, 'success');
+            const payload = {
+                email: identifier || '',
+                otp: code
+            };
+
+            console.log('[Verify] Sending payload:', payload);
+            const response = await axios.post(`${PUBLIC_API_BASE_URL}/auth/verify-login`, payload);
+
+            if (response.status === 200 || response.status === 201) {
+                const { access_token, refresh_token, user } = response.data.data;
+
+                // Save credentials
+                await Promise.all([
+                    AsyncStorage.setItem('access_token', access_token),
+                    AsyncStorage.setItem('refresh_token', refresh_token),
+                    AsyncStorage.setItem('user', JSON.stringify(user)),
+                    AsyncStorage.setItem('userId', user.id)
+                ]);
+
+                showToast('Login verified successfully!', 'success');
                 setTimeout(() => {
-                    router.replace('/(tabs)');
+                    router.replace('/choose-mode');
                 }, 1500);
             } else {
-                showToast(response.message, 'error');
+                showToast(response.data?.message || 'Verification failed', 'error');
             }
-        } catch (error) {
-            showToast('An unexpected error occurred.', 'error');
+        } catch (error: any) {
+            console.error('[Verify] Error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'An unexpected error occurred.';
+            showToast(errorMessage, 'error');
         } finally {
             setIsLoading(false);
         }
@@ -69,11 +91,28 @@ const Verify = () => {
 
     const handleResend = async () => {
         try {
-            const response = await authService.resendCode(identifier || '');
-            showToast(response.message, response.success ? 'success' : 'error');
-            if (response.success) setTimer(300);
-        } catch (error) {
-            showToast('Could not resend code.', 'error');
+            const payload = {
+                email: identifier || '',
+                method: 'both' // Assuming this is needed for resend too
+            };
+            console.log('[Verify] Resending OTP for:', identifier);
+            // We use the login/password endpoint which triggers the OTP resend logic in the backend
+            const response = await axios.post(`${PUBLIC_API_BASE_URL}/auth/login/password`, {
+                email: identifier,
+                password: '', // Password might not be needed if just resending, or there might be a separate endpoint
+                method: 'both'
+            });
+
+            if (response.status === 200 || response.status === 201) {
+                showToast('Verification code resent!', 'success');
+                setTimer(300);
+            } else {
+                showToast(response.data?.message || 'Failed to resend code', 'error');
+            }
+        } catch (error: any) {
+            console.error('[Verify] Resend Error:', error);
+            const errorMessage = error.response?.data?.message || 'Could not resend code.';
+            showToast(errorMessage, 'error');
         }
     };
 
