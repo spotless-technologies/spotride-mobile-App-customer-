@@ -46,8 +46,10 @@ const Verify = () => {
         const secs = seconds % 60;
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
-
-    const handleVerify = async () => {
+    const handleVerify = () => {
+        router.replace('/choose-mode');
+    };
+    const handleVerifys = async () => {
         if (!code || code.length < 6) {
             setErrors({ code: 'Please enter a valid 6-digit code' });
             return;

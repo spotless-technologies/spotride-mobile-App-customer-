@@ -1,47 +1,75 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
-import { Dimensions, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+    Dimensions,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const { width, height } = Dimensions.get('window');
+const ARCH_WIDTH = width * 1.0;
+const ARCH_RADIUS = ARCH_WIDTH / 2;
 
 const ChooseMode = () => {
     const colorScheme = useColorScheme() ?? 'light';
     const themeColors = Colors[colorScheme];
 
     const handleSelectMode = (mode: 'passenger' | 'driver') => {
-        // router.push({
-        //     pathname: '/(auth)/signup',
-        //     params: { mode }
-        // });
+        router.push({
+            pathname: '/(auth)/enable-location',
+            params: { mode },
+        });
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: '#FDF5ED' }]}>
-            <ScrollView bounces={false} contentContainerStyle={{ flexGrow: 1 }}>
-                {/* ── HEADER ── */}
-                <View style={styles.header}>
-                    <Image
-                        source={require('@/assets/images/onboarding/verify.png')}
-                        style={styles.headerImage}
-                    />
-                    <View style={styles.overlay} />
+        <SafeAreaView style={styles.container}>
+            <ScrollView bounces={true} showsVerticalScrollIndicator={false}>
 
-                    <View style={styles.headerContent}>
+                {/* ── HEADER — same structure as Login/Verify ── */}
+                <View style={styles.header}>
+                    {/* bgImage wrapper is intentionally taller than header so image always fills */}
+                    <View style={styles.bgImage}>
+                        <Image
+                            source={require('@/assets/images/onboarding/verify.png')}
+                            style={styles.headerImage}
+                        />
+                    </View>
+
+                    {/* Dark overlay */}
+                    <View style={styles.darkOverlay} />
+
+                    {/* Logo */}
+                    <View style={styles.logoContainer}>
                         <Image
                             source={require('@/assets/images/onboarding/Untitled-1 2.png')}
                             style={styles.logo}
                             resizeMode="contain"
                         />
+                    </View>
+
+                    {/* Title block */}
+                    <View style={styles.headerContent}>
                         <Text style={styles.title}>Choose Your Mode</Text>
                         <Text style={styles.subtitle}>Select how you want to use SpotRide</Text>
                     </View>
+
                 </View>
+
+                {/* ── ORANGE DIVIDER STRIP ── */}
+                <View style={styles.dividerStrip} />
+
+                {/* No divider strip needed — arch handles the transition */}
 
                 {/* ── CONTENT ── */}
                 <View style={styles.content}>
+
                     {/* Passenger Card */}
                     <View style={styles.cardWrapper}>
                         <Image
@@ -56,16 +84,27 @@ const ChooseMode = () => {
                         >
                             <View style={styles.cardTextContainer}>
                                 <Text style={styles.cardTitle}>I'm a Passenger</Text>
-                                <Text style={styles.cardSubtitle}>Book rides and get to your destination safely</Text>
+                                <Text style={styles.cardSubtitle}>
+                                    Book rides and get to your destination safely
+                                </Text>
                             </View>
                         </TouchableOpacity>
                     </View>
 
                     {/* Driver Card */}
                     <View style={styles.cardWrapper}>
-                        <View style={styles.driverImagePlaceholder}>
-                            <Ionicons name="car-sport" size={60} color="#666" />
-                        </View>
+                        {/* Car image behind the card — left edge overflow */}
+                        <Image
+                            source={require('@/assets/images/onboarding/car.png')}
+                            style={styles.carImage}
+                            resizeMode="contain"
+                        />
+                        {/* Chauffeur figure overlapping on top of car */}
+                        <Image
+                            source={require('@/assets/images/onboarding/driver.png')}
+                            style={styles.driverImage}
+                            resizeMode="contain"
+                        />
                         <TouchableOpacity
                             style={[styles.card, { borderColor: '#DDD' }]}
                             onPress={() => handleSelectMode('driver')}
@@ -73,7 +112,9 @@ const ChooseMode = () => {
                         >
                             <View style={styles.cardTextContainer}>
                                 <Text style={styles.cardTitle}>I'm a Driver</Text>
-                                <Text style={styles.cardSubtitle}>Earn money by giving rides to passengers</Text>
+                                <Text style={styles.cardSubtitle}>
+                                    Earn money by giving rides to passengers
+                                </Text>
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -91,6 +132,7 @@ const ChooseMode = () => {
                         </Text>
                     </Text>
                 </View>
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -99,89 +141,127 @@ const ChooseMode = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#FDF5ED',
     },
+
+    /* ── HEADER ── */
     header: {
-        height: height * 0.42,
+        paddingVertical: 20,
+        height: height * 0.48,
         width: '100%',
-        position: 'relative',
+        overflow: 'hidden',          // clips the taller bgImage cleanly
+        backgroundColor: '#111218', // fallback while image loads
+    },
+    bgImage: {
+        height: height * 0.6,        // taller than header — ensures full fill, no gap
     },
     headerImage: {
+        ...StyleSheet.absoluteFillObject,
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
     },
-    overlay: {
+    darkOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.45)',
+        backgroundColor: 'rgba(0,0,0,0.44)',
     },
-    headerContent: {
+    logoContainer: {
         position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
+        top: '28%',
+        width: '100%',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        zIndex: 10,
     },
     logo: {
         width: 160,
         height: 50,
-        marginBottom: 20,
+    },
+    headerContent: {
+        position: 'absolute',
+        top: '52%',
+        width: '100%',
+        alignItems: 'center',
+        zIndex: 10,
+        paddingHorizontal: 20,
     },
     title: {
-        fontSize: 32,
+        fontSize: 30,
         fontWeight: '900',
         color: '#FFF',
         textAlign: 'center',
-        marginBottom: 10,
+        marginBottom: 8,
     },
     subtitle: {
-        fontSize: 16,
+        fontSize: 15,
         color: '#FFF',
-        opacity: 0.9,
+        opacity: 0.88,
         textAlign: 'center',
     },
+    /* ── ORANGE DIVIDER STRIP ── */
+    dividerStrip: {
+        width: '100%',
+        height: 8,
+        backgroundColor: '#F9731673',
+    },
+
+    /* ── CONTENT ── */
     content: {
         flex: 1,
         paddingHorizontal: 24,
-        paddingTop: 40,
+        paddingTop: 16, // Matches Login screen padding
+        backgroundColor: '#FDF5ED',
     },
+
+    /* ── CARD WRAPPER ── shared by both cards ── */
     cardWrapper: {
-        marginBottom: 40,
+        marginBottom: 36,
         position: 'relative',
-        height: 100,
-        justifyContent: 'center',
+        height: 110,
+        justifyContent: 'flex-end',
     },
+
+    /* ── PASSENGER IMAGE ── */
     passengerImage: {
         position: 'absolute',
-        left: -10,
-        top: -30,
-        width: 100,
-        height: 130,
+        left: -8,
+        top: -28,
+        width: 105,
+        height: 138,
         zIndex: 10,
     },
-    driverImagePlaceholder: {
+
+    /* ── DRIVER: CAR IMAGE ── */
+    carImage: {
         position: 'absolute',
-        left: 10,
-        top: -10,
-        width: 80,
-        height: 100,
-        zIndex: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
+        left: -18,
+        bottom: 0,
+        width: 130,
+        height: 88,
+        zIndex: 8,
     },
+
+    /* ── DRIVER: CHAUFFEUR FIGURE ── */
+    driverImage: {
+        position: 'absolute',
+        left: 40,
+        top: -20,
+        width: 55,
+        height: 115,
+        zIndex: 10,
+    },
+
+    /* ── CARD ── */
     card: {
         backgroundColor: '#FFF',
-        borderRadius: 12,
+        borderRadius: 14,
         borderWidth: 1.5,
-        height: 85,
-        paddingLeft: 100,
-        paddingRight: 20,
+        height: 88,
+        paddingLeft: 108,
+        paddingRight: 18,
         justifyContent: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.07,
         shadowRadius: 10,
         elevation: 4,
     },
@@ -190,22 +270,24 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     cardTitle: {
-        fontSize: 19,
+        fontSize: 18,
         fontWeight: '800',
         color: '#111218',
-        marginBottom: 2,
+        marginBottom: 3,
     },
     cardSubtitle: {
         fontSize: 13,
         color: '#666',
-        lineHeight: 16,
+        lineHeight: 17,
     },
+
+    /* ── FOOTER ── */
     footer: {
-        paddingVertical: 30,
+        paddingVertical: 28,
         alignItems: 'center',
     },
     footerText: {
-        fontSize: 16,
+        fontSize: 15,
         color: '#555',
     },
     link: {

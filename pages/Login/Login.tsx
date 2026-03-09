@@ -77,8 +77,10 @@ const Login = () => {
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
-
-    const handleLogin = async () => {
+    const handleLogin = () => {
+        router.replace('/choose-mode');
+    };
+    const handleLogins = async () => {
         if (!validate()) return;
 
         setIsLoading(true);
