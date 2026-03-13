@@ -115,12 +115,12 @@ const Signup = () => {
                 setTimeout(() => {
                     try {
                         router.push({
-                            pathname: '/login',
+                            pathname: '/(auth)/login',
                             params: { identifier: String(identifierValue) },
                         });
                     } catch (navError) {
                         console.error('[Signup] Navigation Error:', navError);
-                        router.replace('/login');
+                        router.replace('/(auth)/login');
                     }
                 }, 1500);
             } else {
@@ -395,7 +395,7 @@ const Signup = () => {
                             Don't have an account?{' '}
                             <Text
                                 style={[styles.footerLink, { color: themeColors.primary }]}
-                                onPress={() => router.push('/login')}
+                                onPress={() => router.push('/(auth)/login')}
                             >
                                 Login
                             </Text>

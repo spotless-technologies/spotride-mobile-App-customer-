@@ -77,7 +77,7 @@ const Verify = () => {
 
                 showToast('Login verified successfully!', 'success');
                 setTimeout(() => {
-                    router.replace('/choose-mode');
+                    router.replace('/(auth)/choose-mode');
                 }, 1500);
             } else {
                 showToast(response.data?.message || 'Verification failed', 'error');

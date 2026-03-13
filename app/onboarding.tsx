@@ -25,17 +25,16 @@ export default function OnboardingRoute() {
 
             // 3. Check for auth status
             const token = await AsyncStorage.getItem('login_token');
-            const userId = await AsyncStorage.getItem('userId');
-
-            // if (!token && !userId) {
-            //     // No token/userId -> Signup
-            //     console.log('[OnboardingRoute] No auth found, redirecting to Signup');
-            //     router.replace('/(auth)/signup');
-            // } else {
-            //     // Auth found or just land on login as fallback
-            //     console.log('[OnboardingRoute] Auth data found or defaulting to Login');
-            //     router.replace('/(auth)/login');
-            // }
+            
+            if (!token) {
+                // No token -> Signup
+                console.log('[OnboardingRoute] No auth found, redirecting to Signup');
+                router.replace('/(auth)/signup');
+            } else {
+                // Token found -> Home (or Auth -> Home via RootLayout)
+                console.log('[OnboardingRoute] Auth token found, redirecting to Home');
+                router.replace('/(tabs)');
+            }
         } catch (error) {
             console.error('[OnboardingRoute] Transition error:', error);
             router.replace('/(auth)/login');

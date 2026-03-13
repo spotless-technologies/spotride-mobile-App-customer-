@@ -1,37 +1,40 @@
-import { OnboardingScreen, SplashScreen } from '@/components/onboarding';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, View, StatusBar } from 'react-native';
+import HomeLayout from '@/components/common/HomeLayout';
+import RealtimeMap from '@/components/map/RealtimeMap';
+import DestinationSearch from '@/components/home/DestinationSearch';
 
-type Stage = 'splash' | 'slides';
+export default function HomeScreen() {
+    const handleFindVehicles = () => {
+        console.log('Finding vehicles...');
+        // Navigation to vehicle selection screen would go here
+    };
 
-export default function OnboardingRoute() {
-  const [stage, setStage] = useState<Stage>('splash');
+    return (
+        <HomeLayout>
+            <View style={styles.container}>
+                <StatusBar barStyle="dark-content" />
+                
+                {/* Real-time Map Background */}
+                <RealtimeMap />
 
-  const handleSplashFinish = () => {
-    setStage('slides');
-  };
-
-  const handleOnboardingDone = () => {
-    // Replace so user cannot back-navigate to onboarding
-    router.replace('/(tabs)');
-  };
-
-  return (
-    <View style={styles.container}>
-      {stage === 'splash' ? (
-        <SplashScreen onFinish={handleSplashFinish} />
-      ) : (
-        <OnboardingScreen onDone={handleOnboardingDone} />
-      )}
-    </View>
-  );
+                {/* Search Bottom Sheet */}
+                <View style={styles.bottomSheetContainer}>
+                    <DestinationSearch onFindVehicles={handleFindVehicles} />
+                </View>
+            </View>
+        </HomeLayout>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#111218',
-  },
+    container: {
+        flex: 1,
+    },
+    bottomSheetContainer: {
+        position: 'absolute',
+        bottom: 0,
+        width: '100%',
+    },
 });
 

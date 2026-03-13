@@ -78,7 +78,7 @@ const Login = () => {
         return Object.keys(newErrors).length === 0;
     };
     const handleLogin = () => {
-        router.replace('/choose-mode');
+        router.replace('/(auth)/choose-mode');
     };
     const handleLogins = async () => {
         if (!validate()) return;
@@ -98,7 +98,7 @@ const Login = () => {
             if (response.status === 200 || response.status === 201) {
                 showToast('Login successful!', 'success');
                 setTimeout(() => {
-                    router.replace('/verify');
+                    router.replace('/(auth)/verify');
                 }, 1500);
             } else {
                 showToast(response.data?.message || 'Login failed', 'error');
@@ -254,7 +254,7 @@ const Login = () => {
                             Don't have an account?{' '}
                             <Text
                                 style={[styles.link, { color: themeColors.primary }]}
-                                onPress={() => router.push('/signup')}
+                                onPress={() => router.push('/(auth)/signup')}
                             >
                                 Sign Up
                             </Text>

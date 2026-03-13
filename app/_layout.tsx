@@ -22,15 +22,19 @@ export default function RootLayout() {
 
   useEffect(() => {
     const checkOnboarding = async () => {
-      console.log('[RootLayout] Checking onboarding status...');
+      console.log('[RootLayout] Checking onboarding and auth status...');
       try {
-        const value = await AsyncStorage.getItem(ONBOARDING_KEY);
-        console.log('[RootLayout] Onboarding status:', value);
+        const onboarded = await AsyncStorage.getItem(ONBOARDING_KEY);
+        const token = await AsyncStorage.getItem('login_token');
+        
+        console.log('[RootLayout] Status:', { onboarded, hasToken: !!token });
 
-        if (value === 'true') {
-          router.replace('/(tabs)');
-        } else {
+        if (onboarded !== 'true') {
           router.replace('/onboarding');
+        } else if (!token) {
+          router.replace('/(auth)/signup');
+        } else {
+          router.replace('/(tabs)');
         }
         setIsCheckingOnboarding(false);
       } catch (e) {
